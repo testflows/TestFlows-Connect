@@ -75,7 +75,7 @@ class Shell(Application):
         self.child.eol("\r")
         if self.new_prompt:
             self.child.expect(self.prompt)
-            self.child.send(self.change_prompt)
+            self.child.send(self.change_prompt.format(self.new_prompt))
             self.prompt = self.new_prompt
             self.child.expect(self.prompt)
             self.child.send("\r", eol="")
