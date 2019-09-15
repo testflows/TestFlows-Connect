@@ -37,7 +37,6 @@ class Command(object):
     def execute(self):
         self.app.child.expect(self.app.prompt)
         self.app.child.send(self.command, eol="\r")
-        self.app.child.expect(self.command[:10], escape=True)
         self.app.child.expect(self.app.prompt, timeout=self.timeout)
         self.app.child.send("\r", eol="")
         self.app.child.expect("\n")
