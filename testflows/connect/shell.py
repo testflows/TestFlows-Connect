@@ -37,7 +37,7 @@ class Command(object):
     def execute(self):
         self.app.child.expect(self.app.prompt)
         self.app.child.send(self.command, eol="\r")
-        self.app.child.expect(re.escape(self.command))
+        self.app.child.expect(re.escape(self.command)[:10])
         self.app.child.expect(self.app.prompt, timeout=self.timeout)
         self.app.child.send("\r", eol="")
         self.app.child.expect("\n")
@@ -73,6 +73,12 @@ class Shell(Application):
         self.child = spawn(self.command)
         self.child.timeout(self.timeout)
         self.child.eol("\r")
+        if self.new_prompt:
+            self.child.expect(self.prompt)
+            self.child.send(self.change_prompt)
+            self.prompt = self.new_prompt
+            self.child.expect(self.prompt)
+            self.child.send("\r", eol="")
 
     def close(self):
         if self.child:
