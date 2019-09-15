@@ -58,7 +58,7 @@ class Shell(Application):
     change_prompt = "export PS1={}"
     timeout = 10
 
-    def __init__(self, command=None, prompt=None, change_prompt=None, new_prompt=None):
+    def __init__(self, command=None, prompt=None, change_prompt=None, new_prompt="bash# "):
         self.command = command or self.command
         self.prompt = prompt or self.prompt
         self.change_prompt = change_prompt or self.change_prompt
