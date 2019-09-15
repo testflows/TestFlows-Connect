@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import re
+from collections import namedtuple
 
 from testflows.core import current_test
 from testflows.uexpect import spawn
@@ -34,14 +34,26 @@ class Command(object):
         self.timeout = timeout
         self.execute()
 
+    def get_exitcode(self):
+        self.app.child.send(self.app.commands.get_exitcode, eol="\r")
+        self.app.child.expect("\n")
+        self.app.child.expect(self.app.prompt)
+        return int(self.app.child.before.rstrip().replace("\r", ""))
+
     def execute(self):
         self.app.child.expect(self.app.prompt)
         self.app.child.send(self.command, eol="\r")
+        for i in range(self.command.count("\n") + 1):
+            self.app.child.expect("\n")
         self.app.child.expect(self.app.prompt, timeout=self.timeout)
+        self.output = self.app.child.before
+        self.output = self.output.rstrip().replace("\r", "")
+        self.exitcode = self.get_exitcode()
         self.app.child.send("\r", eol="")
         self.app.child.expect("\n")
         return self
 
+ShellCommands = namedtuple("ShellCommands", "change_prompt get_exitcode")
 
 class Shell(Application):
     """Connection to shell application.
@@ -54,13 +66,15 @@ class Shell(Application):
     name = "bash"
     prompt = r'[#\$] '
     command = ["/bin/bash", "--noediting"]
-    change_prompt = "export PS1=\"{}\""
+    commands = ShellCommands(
+        change_prompt="export PS1=\"{}\"",
+        get_exitcode="echo $?"
+        )
     timeout = 10
 
-    def __init__(self, command=None, prompt=None, change_prompt=None, new_prompt="bash# "):
+    def __init__(self, command=None, prompt=None, new_prompt="bash# "):
         self.command = command or self.command
         self.prompt = prompt or self.prompt
-        self.change_prompt = change_prompt or self.change_prompt
         self.new_prompt = new_prompt
         self.child = None
         self.test = None
@@ -74,7 +88,8 @@ class Shell(Application):
         self.child.eol("\r")
         if self.new_prompt:
             self.child.expect(self.prompt)
-            self.child.send(self.change_prompt.format(self.new_prompt))
+            self.child.send(self.commands.change_prompt.format(self.new_prompt))
+            self.child.expect("\n")
             self.prompt = self.new_prompt
 
     def close(self):
