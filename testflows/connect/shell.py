@@ -37,7 +37,7 @@ class Command(object):
     def execute(self):
         self.app.child.expect(self.app.prompt)
         self.app.child.send(self.command, eol="\r")
-        self.app.child.expect(re.escape(self.command)[:10])
+        self.app.child.expect(self.command[:10], escape=True)
         self.app.child.expect(self.app.prompt, timeout=self.timeout)
         self.app.child.send("\r", eol="")
         self.app.child.expect("\n")
@@ -55,7 +55,7 @@ class Shell(Application):
     name = "bash"
     prompt = r'[#\$] '
     command = ["/bin/bash", "--noediting"]
-    change_prompt = "export PS1={}"
+    change_prompt = "export PS1=\"{}\""
     timeout = 10
 
     def __init__(self, command=None, prompt=None, change_prompt=None, new_prompt="bash# "):
@@ -77,8 +77,6 @@ class Shell(Application):
             self.child.expect(self.prompt)
             self.child.send(self.change_prompt.format(self.new_prompt))
             self.prompt = self.new_prompt
-            self.child.expect(self.prompt)
-            self.child.send("\r", eol="")
 
     def close(self):
         if self.child:
