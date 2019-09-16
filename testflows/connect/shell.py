@@ -34,7 +34,7 @@ class Parser(object):
             types = {}
         self.pattern = re.compile(pattern)
         self.types = types
-        self.default = self.pattern.groupindex
+        self.default = dict(self.pattern.groupindex)
         for k in self.default:
             self.default[k] = None
         self._match = None
