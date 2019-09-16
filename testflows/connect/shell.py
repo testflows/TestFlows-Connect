@@ -44,7 +44,7 @@ class Parser(object):
         self._match = self.pattern.match(s)
         if self._match:
             values = self._match.groupdict()
-            for k, v in values:
+            for k, v in values.items():
                 values[k] = self.types.get(k, str)(v)
         return values
 
