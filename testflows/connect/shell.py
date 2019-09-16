@@ -39,7 +39,7 @@ class Parser(object):
             self.default[k] = None
         self._match = None
 
-    def parser(self, s):
+    def parse(self, s):
         values = self.default
         self._match = self.pattern.match(s)
         if self._match:
