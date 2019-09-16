@@ -65,6 +65,11 @@ class TestShell(TestBase):
                 with test("exit code 2"):
                     assert bash("ls /foo__").exitcode == 2, error()
 
+        with test("check timeout"):
+            with Shell() as bash:
+                bash.timeout = 6
+                with test("timeout 1 sec"):
+                    bash("echo hello; sleep 0.75; " * 5)
 
 class Test(TestBase):
     def run(self):

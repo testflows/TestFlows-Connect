@@ -11,10 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import time
+
 from collections import namedtuple
 
 from testflows.core import current_test
-from testflows.uexpect import spawn
+from testflows.uexpect import spawn, ExpectTimeoutError
 
 __all__ = ["Shell"]
 
@@ -26,12 +28,13 @@ class Application(object):
 
 
 class Command(object):
-    def __init__(self, app, command, timeout=None):
+    def __init__(self, app, command, timeout=None, total=None):
         self.app = app
         self.output = None
         self.exitcode = None
         self.command = command
         self.timeout = timeout
+        self.total = total
         self.execute()
 
     def get_exitcode(self):
@@ -45,8 +48,34 @@ class Command(object):
         self.app.child.send(self.command, eol="\r")
         for i in range(self.command.count("\n") + 1):
             self.app.child.expect("\n")
-        self.app.child.expect(self.app.prompt, timeout=self.timeout)
-        self.output = self.app.child.before
+        next_timeout = self.timeout
+        start_time = time.time()
+        pattern = f"({self.app.prompt})|(\n)"
+        while True:
+            try:
+                match = self.app.child.expect(pattern, timeout=next_timeout)
+                if not self.output:
+                    self.output = ""
+                if match.groups()[0]:
+                    self.output += self.app.child.before
+                    break
+                elif match.groups()[1]:
+                    self.output += self.app.child.before + self.app.child.after
+                    elapsed = time.time() - start_time
+                    if self.total:
+                        if elapsed >= self.total:
+                            raise ExpectTimeoutError(match.re, self.total, self.output)
+                        next_timeout = max(self.timeout, self.total - elapsed)
+                        continue
+            except ExpectTimeoutError:
+                self.output = self.app.child.before if self.output is None else self.output + (self.app.child.before or '')
+                elapsed = time.time() - start_time
+                if self.total:
+                    if elapsed >= self.total:
+                        raise
+                    next_timeout = max(self.timeout, self.total - elapsed)
+                    continue
+                raise
         self.output = self.output.rstrip().replace("\r", "")
         self.exitcode = self.get_exitcode()
         self.app.child.send("\r", eol="")
@@ -96,10 +125,13 @@ class Shell(Application):
         if self.child:
             self.child.close()
 
-    def __call__(self, command, timeout=None, test=None):
+    def __call__(self, command, timeout=None, total=None, test=None):
         """Execute shell command.
 
         :param command: command to execute
+        :param timeout: time to wait for the next line of output
+        :param total: time to wait for the command to complete
+            and return to the prompt, default: None (no limit)
         :param test: caller test
         """
         if test is None:
@@ -115,7 +147,7 @@ class Shell(Application):
             self.test = test
             self.child.logger(self.test.message_io(self.name))
 
-        return Command(self, command=command, timeout=timeout)
+        return Command(self, command=command, timeout=timeout, total=total)
 
     def __exit__(self, type, value, traceback):
         self.close()
