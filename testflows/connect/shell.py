@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import re
 import time
 
 from collections import namedtuple
@@ -18,7 +19,7 @@ from collections import namedtuple
 from testflows.core import current_test
 from testflows.uexpect import spawn, ExpectTimeoutError
 
-__all__ = ["Shell"]
+__all__ = ["Shell", "Parser"]
 
 class Application(object):
     """Base class for all CLI applications
@@ -27,14 +28,37 @@ class Application(object):
     pass
 
 
+class Parser(object):
+    def __init__(self, pattern, types=None):
+        if types is None:
+            types = {}
+        self.pattern = re.compile(pattern)
+        self.types = types
+        self.default = self.pattern.groupindex
+        for k in self.default:
+            self.default[k] = None
+        self._match = None
+
+    def parser(self, s):
+        values = self.default
+        self._match = self.pattern.match(s)
+        if self._match:
+            values = self._match.groupdict()
+            for k, v in values:
+                values[k] = self.types.get(k, str)(v)
+        return values
+
+
 class Command(object):
-    def __init__(self, app, command, timeout=None, total=None):
+    def __init__(self, app, command, timeout=None, total=None, parser=None):
         self.app = app
         self.output = None
         self.exitcode = None
         self.command = command
         self.timeout = timeout
         self.total = total
+        self.parser = parser
+        self.values = None
         self.execute()
 
     def get_exitcode(self):
@@ -77,6 +101,8 @@ class Command(object):
                     continue
                 raise
         self.output = self.output.rstrip().replace("\r", "")
+        if self.parser:
+            self.values = self.parser.parse(self.output)
         self.exitcode = self.get_exitcode()
         self.app.child.send("\r", eol="")
         self.app.child.expect("\n")
@@ -125,13 +151,14 @@ class Shell(Application):
         if self.child:
             self.child.close()
 
-    def __call__(self, command, timeout=None, total=None, test=None):
+    def __call__(self, command, timeout=None, total=None, parser=None, test=None):
         """Execute shell command.
 
         :param command: command to execute
         :param timeout: time to wait for the next line of output
         :param total: time to wait for the command to complete
             and return to the prompt, default: None (no limit)
+        :param parser: output parser
         :param test: caller test
         """
         if test is None:
@@ -147,7 +174,7 @@ class Shell(Application):
             self.test = test
             self.child.logger(self.test.message_io(self.name))
 
-        return Command(self, command=command, timeout=timeout, total=total)
+        return Command(self, command=command, timeout=timeout, total=total, parser=parser)
 
     def __exit__(self, type, value, traceback):
         self.close()
