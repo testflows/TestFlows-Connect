@@ -155,6 +155,20 @@ class Shell(Application):
         if self.child:
             self.child.close()
 
+    def send(self, *args, **kwargs):
+        return self.child.send(*args, **kwargs)
+
+    def expect(self, *args, **kwargs):
+        test = kwargs.pop("test", None)
+        if test is None:
+            test = current_test.object
+
+        if self.test is not test:
+            self.test = test
+            self.child.logger(self.test.message_io(self.name))
+
+        return self.child.expect(*args, **kwargs)
+
     def __call__(self, command, timeout=None, total=None, parser=None, test=None):
         """Execute shell command.
 
