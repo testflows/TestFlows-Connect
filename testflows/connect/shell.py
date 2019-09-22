@@ -132,18 +132,25 @@ class AsyncCommand(Command):
     def __exit__(self, exception_type, exception_value, exception_traceback):
         self.close()
 
-    def close(self, ctrl="\03"):
+    def close(self, ctrl="\03", test=None):
         """Abort async command"""
         if self.exitcode is not None:
             return
         self.app.child.send(ctrl, eol="")
         return self.readlines()
 
-    def readlines(self, timeout=None):
+    def readlines(self, timeout=None, test=None):
         """Return currently available output.
         """
+        if test is None:
+            test = current_test.object
+
         if timeout is None:
             timeout = self.timeout
+
+        if self.app.test is not test:
+            self.app.test = test
+            self.app.child.logger(self.app.test.message_io(self.app.name))
 
         output = ""
         pattern = f"({self.app.prompt})|(\n)"
