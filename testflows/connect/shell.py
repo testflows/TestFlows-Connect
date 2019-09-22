@@ -156,12 +156,18 @@ class Shell(Application):
             self.child.close()
 
     def send(self, *args, **kwargs):
+        if self.child is None:
+            self.open()
+
         return self.child.send(*args, **kwargs)
 
     def expect(self, *args, **kwargs):
         test = kwargs.pop("test", None)
         if test is None:
             test = current_test.object
+
+        if self.child is None:
+            self.open()
 
         if self.test is not test:
             self.test = test
