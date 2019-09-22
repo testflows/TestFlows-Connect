@@ -203,12 +203,13 @@ class Shell(Application):
         )
     timeout = 10
 
-    def __init__(self, command=None, prompt=None, new_prompt="bash# "):
+    def __init__(self, command=None, prompt=None, new_prompt="bash# ", name=None):
         self.command = command or self.command
         self.prompt = prompt or self.prompt
         self.new_prompt = new_prompt
         self.child = None
         self.test = None
+        self.name = name if name is not None else self.name
 
     def __enter__(self):
         return self
