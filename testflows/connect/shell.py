@@ -112,6 +112,71 @@ class Command(object):
         self.app.child.expect("\n")
         return self
 
+class AsyncCommand(Command):
+    """Asynchronous command.
+    """
+    def __init__(self, app, command, timeout=None, parser=None):
+        if timeout is None:
+            timeout = 2
+        super(AsyncCommand, self).__init__(app=app, command=command, timeout=timeout, total=None, parser=parser)
+
+    def execute(self):
+        self.app.child.expect(self.app.prompt)
+        self.app.child.send(self.command, eol="\r")
+        for i in range(self.command.count("\n") + 1):
+            self.app.child.expect("\n")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, exception_traceback):
+        self.close()
+
+    def close(self, ctrl="\03"):
+        """Abort async command"""
+        if self.exitcode is not None:
+            return
+        self.app.child.send(ctrl, eol="")
+        return self.readlines()
+
+    def readlines(self, timeout=None):
+        """Return currently available output.
+        """
+        if timeout is None:
+            timeout = self.timeout
+
+        output = ""
+        pattern = f"({self.app.prompt})|(\n)"
+
+        while True:
+            raised_timeout = False
+            try:
+                match = self.app.child.expect(pattern, timeout=timeout)
+                # prompt
+                if match.groups()[0]:
+                    output += self.app.child.before
+                    self.exitcode = self.get_exitcode()
+                    self.app.child.send("\r", eol="")
+                    self.app.child.expect("\n")
+                    break
+                # new line
+                elif match.groups()[1]:
+                    output += self.app.child.before + self.app.child.after
+            except ExpectTimeoutError:
+                output = self.app.child.before if output is None else output + (self.app.child.before or '')
+                break
+
+        output = output.rstrip().replace("\r", "")
+
+        if output and self.parser:
+            self.values = self.parser.parse(output)
+
+        if self.output is None:
+            self.output = ""
+
+        self.output += output
+        return output
+
 ShellCommands = namedtuple("ShellCommands", "change_prompt get_exitcode")
 
 class Shell(Application):
@@ -175,7 +240,7 @@ class Shell(Application):
 
         return self.child.expect(*args, **kwargs)
 
-    def __call__(self, command, timeout=None, total=None, parser=None, test=None):
+    def __call__(self, command, timeout=None, total=None, parser=None, async=False, test=None):
         """Execute shell command.
 
         :param command: command to execute
@@ -183,6 +248,7 @@ class Shell(Application):
         :param total: time to wait for the command to complete
             and return to the prompt, default: None (no limit)
         :param parser: output parser
+        :param async: async command, default: None (not async)
         :param test: caller test
         """
         if test is None:
@@ -197,6 +263,9 @@ class Shell(Application):
         if self.test is not test:
             self.test = test
             self.child.logger(self.test.message_io(self.name))
+
+        if async:
+            return AsyncCommand(self, command=command, timeout=None, parser=parser)
 
         return Command(self, command=command, timeout=timeout, total=total, parser=parser)
 

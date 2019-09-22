@@ -71,6 +71,11 @@ class TestShell(TestBase):
                 with test("timeout 1 sec"):
                     bash("echo hello; sleep 0.75; " * 5)
 
+        with test("async command"):
+            with Shell() as bash:
+                with bash("tail -f /proc/cpuinfo", async=True) as tail:
+                    tail.readlines()
+
 class Test(TestBase):
     def run(self):
         with test("import testflows.connect"):
