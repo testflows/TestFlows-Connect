@@ -50,7 +50,7 @@ class Parser(object):
 
 
 class Command(object):
-    def __init__(self, app, command, timeout=None, total=None, parser=None):
+    def __init__(self, app, command, timeout=None, total=None, parser=None, name=None):
         self.app = app
         self.output = None
         self.exitcode = None
@@ -59,6 +59,10 @@ class Command(object):
         self.total = total
         self.parser = parser
         self.values = None
+        self.name = self.app.name
+        if name:
+            self.name = f"{self.app.name}.{name}"
+        self.app.child.logger(self.app.test.message_io(self.name))
         self.execute()
 
     def get_exitcode(self):
@@ -115,10 +119,10 @@ class Command(object):
 class AsyncCommand(Command):
     """Asynchronous command.
     """
-    def __init__(self, app, command, timeout=None, parser=None):
+    def __init__(self, app, command, timeout=None, parser=None, name=None):
         if timeout is None:
             timeout = 2
-        super(AsyncCommand, self).__init__(app=app, command=command, timeout=timeout, total=None, parser=parser)
+        super(AsyncCommand, self).__init__(app=app, command=command, timeout=timeout, total=None, parser=parser, name=name)
 
     def execute(self):
         self.app.child.expect(self.app.prompt)
@@ -150,7 +154,7 @@ class AsyncCommand(Command):
 
         if self.app.test is not test:
             self.app.test = test
-            self.app.child.logger(self.app.test.message_io(self.app.name))
+            self.app.child.logger(self.app.test.message_io(self.name))
 
         output = ""
         pattern = f"({self.app.prompt})|(\n)"
@@ -248,7 +252,7 @@ class Shell(Application):
 
         return self.child.expect(*args, **kwargs)
 
-    def __call__(self, command, timeout=None, total=None, parser=None, async=False, test=None):
+    def __call__(self, command, timeout=None, total=None, parser=None, async=False, test=None, name=None):
         """Execute shell command.
 
         :param command: command to execute
@@ -270,12 +274,11 @@ class Shell(Application):
 
         if self.test is not test:
             self.test = test
-            self.child.logger(self.test.message_io(self.name))
 
         if async:
-            return AsyncCommand(self, command=command, timeout=None, parser=parser)
+            return AsyncCommand(self, command=command, timeout=None, parser=parser, name=name)
 
-        return Command(self, command=command, timeout=timeout, total=total, parser=parser)
+        return Command(self, command=command, timeout=timeout, total=total, parser=parser, name=name)
 
     def __exit__(self, type, value, traceback):
         self.close()

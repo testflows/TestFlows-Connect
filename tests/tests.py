@@ -32,6 +32,14 @@ class TestShell(TestBase):
             with Shell() as bash:
                 bash("ls -la")
 
+        with test("custom shell name"):
+            with Shell(name="shell") as shell:
+                shell("ls -la")
+
+        with test("execute command with custom name"):
+            with Shell() as bash:
+                bash("ls -la", name="ls")
+
         with test("execute multiple commands"):
             with Shell() as bash:
                 bash("echo Hello World")
@@ -74,6 +82,11 @@ class TestShell(TestBase):
         with test("async command"):
             with Shell() as bash:
                 with bash("tail -f /proc/cpuinfo", async=True) as tail:
+                    tail.readlines()
+
+        with test("async command with custom name"):
+            with Shell() as bash:
+                with bash("tail -f /proc/cpuinfo", async=True, name="cpuinfo") as tail:
                     tail.readlines()
 
 class Test(TestBase):
