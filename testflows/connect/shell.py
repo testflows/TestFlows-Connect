@@ -76,6 +76,7 @@ class Command(object):
         start_time = time.time()
         pattern = f"({self.app.prompt})|(\n)"
         while True:
+            raised_timeout = False
             try:
                 match = self.app.child.expect(pattern, timeout=next_timeout)
                 if not self.output:
@@ -88,11 +89,13 @@ class Command(object):
                     elapsed = time.time() - start_time
                     if self.total:
                         if elapsed >= self.total:
+                            raised_timeout = True
                             raise ExpectTimeoutError(match.re, self.total, self.output)
                         next_timeout = max(self.timeout, self.total - elapsed)
                         continue
             except ExpectTimeoutError:
-                self.output = self.app.child.before if self.output is None else self.output + (self.app.child.before or '')
+                if not raised_timeout:
+                    self.output = self.app.child.before if self.output is None else self.output + (self.app.child.before or '')
                 elapsed = time.time() - start_time
                 if self.total:
                     if elapsed >= self.total:
@@ -100,7 +103,8 @@ class Command(object):
                     next_timeout = max(self.timeout, self.total - elapsed)
                     continue
                 raise
-        self.output = self.output.rstrip().replace("\r", "")
+        if self.output:
+            self.output = self.output.rstrip().replace("\r", "")
         if self.parser:
             self.values = self.parser.parse(self.output)
         self.exitcode = self.get_exitcode()

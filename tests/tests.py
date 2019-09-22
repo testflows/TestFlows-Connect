@@ -80,5 +80,5 @@ class Test(TestBase):
             pass
 
 if main():
-    with Test("regression"):
+    with test("regression", test=Test):
         pass
