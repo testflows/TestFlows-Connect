@@ -122,6 +122,8 @@ class AsyncCommand(Command):
     def __init__(self, app, command, timeout=None, parser=None, name=None):
         if timeout is None:
             timeout = 2
+        if name is None:
+            name = command
         super(AsyncCommand, self).__init__(app=app, command=command, timeout=timeout, total=None, parser=parser, name=name)
 
     def execute(self):
