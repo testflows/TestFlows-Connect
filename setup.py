@@ -19,7 +19,14 @@ setup(
     description="TestFlows - Connect",
     author="Vitaliy Zakaznikov",
     author_email="vzakaznikov@testflows.com",
-    url="http://testflows.com",
+    url="https://github.com/testflows/testflows-connect",
+    classifiers=[
+        "Development Status :: 2 - Pre-Alpha",
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: Apache Software License",
+        "Operating System :: POSIX :: Linux",
+    ],
+    python_requires='>=3.6',
     license="Apache-2.0",
     packages=[
         "testflows.connect",
