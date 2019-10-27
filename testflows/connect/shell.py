@@ -77,6 +77,8 @@ class Command(object):
         for i in range(self.command.count("\n") + 1):
             self.app.child.expect("\n")
         next_timeout = self.timeout
+        if next_timeout is None:
+            next_timeout = 1
         start_time = time.time()
         pattern = f"({self.app.prompt})|(\n)"
         while True:
