@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import re
+import sys
 import time
 
 from collections import namedtuple
@@ -78,7 +79,7 @@ class Command(object):
             self.app.child.expect("\n")
         next_timeout = self.timeout
         if next_timeout is None:
-            next_timeout = 1
+            next_timeout = sys.maxsize
         start_time = time.time()
         pattern = f"({self.app.prompt})|(\n)"
         while True:
