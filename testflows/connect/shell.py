@@ -17,7 +17,7 @@ import time
 
 from collections import namedtuple
 
-from testflows.core import current_test
+from testflows.core import current
 from testflows.uexpect import spawn, ExpectTimeoutError
 
 __all__ = ["Shell", "Parser"]
@@ -152,7 +152,7 @@ class AsyncCommand(Command):
         """Return currently available output.
         """
         if test is None:
-            test = current_test.object
+            test = current()
 
         if timeout is None:
             timeout = self.timeout
@@ -223,9 +223,11 @@ class Shell(Application):
     def __enter__(self):
         return self
 
-    def open(self):
+    def open(self, timeout=None):
+        if timeout is None:
+            timeout = self.timeout
         self.child = spawn(self.command)
-        self.child.timeout(self.timeout)
+        self.child.timeout(timeout)
         self.child.eol("\r")
         if self.new_prompt:
             self.child.expect(self.prompt)
@@ -246,7 +248,7 @@ class Shell(Application):
     def expect(self, *args, **kwargs):
         test = kwargs.pop("test", None)
         if test is None:
-            test = current_test.object
+            test = current()
 
         if self.child is None:
             self.open()
@@ -269,13 +271,13 @@ class Shell(Application):
         :param test: caller test
         """
         if test is None:
-            test = current_test.object
+            test = current()
 
         if timeout is None:
             timeout = self.timeout
 
         if self.child is None:
-            self.open()
+            self.open(timeout)
 
         if self.test is not test:
             self.test = test
