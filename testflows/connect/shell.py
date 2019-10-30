@@ -259,7 +259,7 @@ class Shell(Application):
 
         return self.child.expect(*args, **kwargs)
 
-    def __call__(self, command, timeout=None, total=None, parser=None, async=False, test=None, name=None):
+    def __call__(self, command, timeout=None, total=None, parser=None, asyncronous=False, test=None, name=None):
         """Execute shell command.
 
         :param command: command to execute
@@ -267,7 +267,7 @@ class Shell(Application):
         :param total: time to wait for the command to complete
             and return to the prompt, default: None (no limit)
         :param parser: output parser
-        :param async: async command, default: None (not async)
+        :param asyncronous: asyncronous command, default: None (not async)
         :param test: caller test
         """
         if test is None:
@@ -282,7 +282,7 @@ class Shell(Application):
         if self.test is not test:
             self.test = test
 
-        if async:
+        if asyncronous:
             return AsyncCommand(self, command=command, timeout=None, parser=parser, name=name)
 
         return Command(self, command=command, timeout=timeout, total=total, parser=parser, name=name)
