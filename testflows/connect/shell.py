@@ -67,6 +67,8 @@ class Command(object):
         self.execute()
 
     def get_exitcode(self):
+        if getattr(self.app.commands, "get_exitcode", None) is None:
+            return None
         self.app.child.send(self.app.commands.get_exitcode, eol="\r")
         self.app.child.expect("\n")
         self.app.child.expect(self.app.prompt)
@@ -74,6 +76,11 @@ class Command(object):
 
     def execute(self):
         self.app.child.expect(self.app.prompt)
+        while True:
+            try:
+                self.app.child.expect(self.app.prompt, timeout=0.001)
+            except ExpectTimeoutError:
+                break
         self.app.child.send(self.command, eol="\r")
         for i in range(self.command.count("\n") + 1):
             self.app.child.expect("\n")
@@ -131,6 +138,11 @@ class AsyncCommand(Command):
 
     def execute(self):
         self.app.child.expect(self.app.prompt)
+        while True:
+            try:
+                self.app.child.expect(self.app.prompt, timeout=0.001)
+            except ExpectTimeoutError:
+                break
         self.app.child.send(self.command, eol="\r")
         for i in range(self.command.count("\n") + 1):
             self.app.child.expect("\n")
@@ -229,7 +241,7 @@ class Shell(Application):
         self.child = spawn(self.command)
         self.child.timeout(timeout)
         self.child.eol("\r")
-        if self.new_prompt:
+        if self.new_prompt and getattr(self.commands, "change_prompt", None):
             self.child.expect(self.prompt)
             self.child.send(self.commands.change_prompt.format(self.new_prompt))
             self.child.expect("\n")
