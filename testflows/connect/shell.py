@@ -140,9 +140,7 @@ class AsyncCommand(Command):
     def execute(self):
         self.app.child.expect(self.app.prompt)
         while True:
-            try:
-                self.app.child.expect(self.app.prompt, timeout=0.001)
-            except ExpectTimeoutError:
+            if not self.app.child.expect(self.app.prompt, timeout=0.001, expect_timeout=True):
                 break
         self.app.child.send(self.command, eol="\r")
         for i in range(self.command.count("\n") + 1):
