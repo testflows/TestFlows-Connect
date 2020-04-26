@@ -88,6 +88,17 @@ class RegressionSuite(TestBase):
                 with bash("tail -f /proc/cpuinfo", asyncronous=True, name="cpuinfo") as tail:
                     tail.readlines()
 
+        with Test("check double prompts before command"):
+            with Shell() as bash:
+                bash.send("")
+                bash("ls")
+
+        with Test("check double prompts after command"):
+            with Shell() as bash:
+                bash.send("")
+                bash("ls\r\n")
+                bash("ls; echo -e 'bash# \nbash# '")
+
 class Regression(TestBase):
     def run(self):
         with Test("import testflows.connect"):

@@ -69,6 +69,9 @@ class Command(object):
     def get_exitcode(self):
         if getattr(self.app.commands, "get_exitcode", None) is None:
             return None
+        while True:
+            if not self.app.child.expect(self.app.prompt, timeout=0.001, expect_timeout=True):
+                break
         self.app.child.send(self.app.commands.get_exitcode, eol="\r")
         self.app.child.expect("\n")
         self.app.child.expect(self.app.prompt)
@@ -77,9 +80,7 @@ class Command(object):
     def execute(self):
         self.app.child.expect(self.app.prompt)
         while True:
-            try:
-                self.app.child.expect(self.app.prompt, timeout=0.001)
-            except ExpectTimeoutError:
+            if not self.app.child.expect(self.app.prompt, timeout=0.001, expect_timeout=True):
                 break
         self.app.child.send(self.command, eol="\r")
         for i in range(self.command.count("\n") + 1):
