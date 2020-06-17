@@ -43,7 +43,7 @@ setup(
     ],
     extras_require={
         "dev": [
-            "testflows.core"
+            "testflows.core>=1.6"
         ]
     }
 )
