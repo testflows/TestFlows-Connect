@@ -45,6 +45,10 @@ def suite(self):
             bash("ls -la")
             bash("echo Bye World")
 
+    with Test("execute command with utf-8"):
+        with Shell() as bash:
+            bash("echo Gãńdåłf_Thê_Gręât")
+
     with Test("share the same shell between different tests"):
         with Shell() as bash:
             with Step("first test"):
