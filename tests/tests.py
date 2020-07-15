@@ -99,9 +99,15 @@ def suite(self):
 
     with Test("check double prompts after command"):
         with Shell() as bash:
-            bash.send("")
-            bash("ls\r\n")
-            bash("ls; echo -e 'bash# \nbash# '")
+            for i in range(100):
+                bash.send("")
+                bash("ls\r\n")
+                bash("ls; echo -e 'bash# \nbash# '")
+
+    with Test("check multiline command"):
+        with Shell() as bash:
+            for i in range(100):
+                bash("cat << HEREDOC > foo\nline 1\nline 2\nline 3\nHEREDOC")
 
 @TestModule
 def regression(self):

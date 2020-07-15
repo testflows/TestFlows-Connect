@@ -71,7 +71,7 @@ class Command(object):
         if getattr(self.app.commands, "get_exitcode", None) is None:
             return None
         while True:
-            if not self.app.child.expect(self.app.prompt, timeout=0.001, expect_timeout=True):
+            if not self.app.child.expect(self.app.prompt, timeout=0.01, expect_timeout=True):
                 break
         self.app.child.send(self.app.commands.get_exitcode, eol="\r")
         self.app.child.expect("\n")
@@ -81,14 +81,24 @@ class Command(object):
     def execute(self):
         self.app.child.expect(self.app.prompt)
         while True:
-            if not self.app.child.expect(self.app.prompt, timeout=0.001, expect_timeout=True):
+            if not self.app.child.expect(self.app.prompt, timeout=0.01, expect_timeout=True):
                 break
-        self.app.child.send(self.command, eol="\r")
+
+        for i, line in enumerate(self.command.split("\n")):
+            if i > 0:
+                self.app.child.send("\n", eol="")
+                time.sleep(0.010)
+            if line:
+                self.app.child.send(line, eol="")
+        self.app.child.send("\r", eol="")
+
         for i in range(self.command.count("\n") + 1):
             self.app.child.expect("\n")
+
         next_timeout = self.timeout
         if next_timeout is None:
             next_timeout = sys.maxsize
+
         start_time = time.time()
         pattern = f"({self.app.prompt})|(\n)"
         while True:
