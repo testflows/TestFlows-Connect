@@ -71,29 +71,48 @@ class Command(object):
         if getattr(self.app.commands, "get_exitcode", None) is None:
             return None
         while True:
-            if not self.app.child.expect(self.app.prompt, timeout=0.01, expect_timeout=True):
+            if not self.app.child.expect(self.app.prompt, timeout=0.001, expect_timeout=True):
                 break
-        self.app.child.send(self.app.commands.get_exitcode, eol="\r")
+        command = self.app.commands.get_exitcode
+        self.app.child.send(command, eol="")
+        while True:
+            if not self.app.child.expect("\n", timeout=0.001, expect_timeout=True):
+                break
+        self.app.child.send("\r", eol="")
         self.app.child.expect("\n")
         self.app.child.expect(self.app.prompt)
         return int(self.app.child.before.rstrip().replace("\r", ""))
 
-    def execute(self):
+    def _send_command(self):
+        """Send command.
+        """
         self.app.child.expect(self.app.prompt)
         while True:
-            if not self.app.child.expect(self.app.prompt, timeout=0.01, expect_timeout=True):
+            if not self.app.child.expect(self.app.prompt, timeout=0.001, expect_timeout=True):
                 break
 
-        for i, line in enumerate(self.command.split("\n")):
+        lines = self.command.split("\n")
+
+        for i, line in enumerate(lines):
             if i > 0:
                 self.app.child.send("\n", eol="")
-                time.sleep(0.010)
+                self.app.child.expect("\n")
+                if i < len(lines) -1 :
+                    self.app.child.expect(">", timeout=0.001, expect_timeout=True)
+                time.sleep(0.001)
+
             if line:
                 self.app.child.send(line, eol="")
-        self.app.child.send("\r", eol="")
 
-        for i in range(self.command.count("\n") + 1):
-            self.app.child.expect("\n")
+        while True:
+            if not self.app.child.expect("\n", timeout=0.001, expect_timeout=True):
+                break
+
+        self.app.child.send("\r", eol="")
+        self.app.child.expect("\n")
+
+    def execute(self):
+        self._send_command()
 
         next_timeout = self.timeout
         if next_timeout is None:
@@ -149,13 +168,7 @@ class AsyncCommand(Command):
         super(AsyncCommand, self).__init__(app=app, command=command, timeout=timeout, total=None, parser=parser, name=name)
 
     def execute(self):
-        self.app.child.expect(self.app.prompt)
-        while True:
-            if not self.app.child.expect(self.app.prompt, timeout=0.001, expect_timeout=True):
-                break
-        self.app.child.send(self.command, eol="\r")
-        for i in range(self.command.count("\n") + 1):
-            self.app.child.expect("\n")
+        self._send_command()
 
     def __enter__(self):
         return self

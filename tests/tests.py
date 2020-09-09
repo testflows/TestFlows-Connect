@@ -13,6 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import textwrap
+
 from testflows.core import *
 from testflows.asserts import error, values
 
@@ -20,7 +22,7 @@ from testflows.asserts import error, values
 def suite(self):
     """Suite of Shell tests.
     """
-    with Test("import"):
+    with Given("import"):
         from testflows.connect import Shell
 
     with Test("open"):
@@ -104,10 +106,50 @@ def suite(self):
                 bash("ls\r\n")
                 bash("ls; echo -e 'bash# \nbash# '")
 
+    with Test("check empty lines before command"):
+        with Shell() as bash:
+            for i in range(100):
+                bash("\n\n\necho \"foo\"")
+
+    with Test("check empty lines after command"):
+        with Shell() as bash:
+            for i in range(100):
+                bash("echo \"foo\"\n\n\n")
+
+    with Test("check empty lines before and after command"):
+        with Shell() as bash:
+            for i in range(100):
+                bash("\n\n\necho \"foo\"\n\n\n")
+
     with Test("check multiline command"):
         with Shell() as bash:
             for i in range(100):
                 bash("cat << HEREDOC > foo\nline 1\nline 2\nline 3\nHEREDOC")
+
+    with Test("check multiline command with long lines"):
+        with Shell() as bash:
+            cmd = ("cat << HEREDOC > foo\n"
+               "'111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111', '22222222222222222'\n"
+               "'22222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222', '33333333333333333'\n"
+               "HEREDOC")
+            for i in range(100):
+                bash(cmd)
+
+    with Test("check multiline command using echo -e with long lines"):
+        with Shell() as bash:
+            cmd = textwrap.dedent("""
+                echo -e "
+                SELECT hex(
+                    aes_decrypt_mysql(
+                        'aes-256-cbc',
+                        dictGet('default.dict_user_data', 'secret', toUInt64(1)),
+                        '11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111', '22222222222222222$
+                    )
+                )
+                "
+                """)
+            for i in range(100):
+                bash(cmd)
 
 @TestModule
 def regression(self):
