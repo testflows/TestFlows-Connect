@@ -75,9 +75,7 @@ class Command(object):
                 break
         command = self.app.commands.get_exitcode
         self.app.child.send(command, eol="")
-        while True:
-            if not self.app.child.expect("\n", timeout=0.001, expect_timeout=True):
-                break
+        self.app.child.expect(re.escape(command))
         self.app.child.send("\r", eol="")
         self.app.child.expect("\n")
         self.app.child.expect(self.app.prompt)
