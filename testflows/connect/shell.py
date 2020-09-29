@@ -81,36 +81,8 @@ class Command(object):
         self.app.child.expect(self.app.prompt)
         return int(self.app.child.before.rstrip().replace("\r", ""))
 
-    def _send_command(self):
-        """Send command.
-        """
-        self.app.child.expect(self.app.prompt)
-        while True:
-            if not self.app.child.expect(self.app.prompt, timeout=0.001, expect_timeout=True):
-                break
-
-        lines = self.command.split("\n")
-
-        for i, line in enumerate(lines):
-            if i > 0:
-                self.app.child.send("\n", eol="")
-                self.app.child.expect("\n")
-                if i < len(lines) -1 :
-                    self.app.child.expect(">", timeout=0.001, expect_timeout=True)
-                time.sleep(0.001)
-
-            if line:
-                self.app.child.send(line, eol="")
-
-        while True:
-            if not self.app.child.expect("\n", timeout=0.001, expect_timeout=True):
-                break
-
-        self.app.child.send("\r", eol="")
-        self.app.child.expect("\n")
-
     def execute(self):
-        self._send_command()
+        self.app._send_command(self.command)
 
         next_timeout = self.timeout
         if next_timeout is None:
@@ -166,20 +138,28 @@ class AsyncCommand(Command):
         super(AsyncCommand, self).__init__(app=app, command=command, timeout=timeout, total=None, parser=parser, name=name)
 
     def execute(self):
-        self._send_command()
+        self.app._send_command(self.command)
 
     def __enter__(self):
         return self
 
     def __exit__(self, exception_type, exception_value, exception_traceback):
         self.close()
+        self.app.child.logger(self.app.test.message_io(self.app.name))
 
     def close(self, ctrl="\03", test=None):
         """Abort async command"""
         if self.exitcode is not None:
             return
-        self.app.child.send(ctrl, eol="")
-        return self.readlines()
+
+        self.app.send("\r", eol="")
+        output = self.readlines()
+
+        if self.exitcode is None:
+            self.app.child.send(ctrl, eol="")
+            output += self.readlines()
+
+        return output
 
     def readlines(self, timeout=None, test=None):
         """Return currently available output.
@@ -238,6 +218,7 @@ class Shell(Application):
     """
     name = "bash"
     prompt = r'[#\$] '
+    new_prompt = "bash# "
     command = ["/bin/bash", "--noediting"]
     commands = ShellCommands(
         change_prompt="export PS1=\"{}\"",
@@ -245,12 +226,13 @@ class Shell(Application):
         )
     timeout = 10
 
-    def __init__(self, command=None, prompt=None, new_prompt="bash# ", name=None):
+    def __init__(self, command=None, prompt=None, new_prompt=None, name=None, spawn=spawn):
         self.command = command or self.command
         self.prompt = prompt or self.prompt
-        self.new_prompt = new_prompt
+        self.new_prompt = new_prompt or self.new_prompt
         self.child = None
         self.test = None
+        self.spawn = spawn
         self.name = name if name is not None else self.name
 
     def __enter__(self):
@@ -259,12 +241,14 @@ class Shell(Application):
     def open(self, timeout=None):
         if timeout is None:
             timeout = self.timeout
-        self.child = spawn(self.command)
+        self.child = self.spawn(self.command)
         self.child.timeout(timeout)
         self.child.eol("\r")
         if self.new_prompt and getattr(self.commands, "change_prompt", None):
             self.child.expect(self.prompt)
-            self.child.send(self.commands.change_prompt.format(self.new_prompt))
+            change_prompt_command = self.commands.change_prompt.format(self.new_prompt)
+            self.child.send(change_prompt_command)
+            self.child.expect(re.escape(change_prompt_command))
             self.child.expect("\n")
             self.prompt = self.new_prompt
 
@@ -273,8 +257,21 @@ class Shell(Application):
             self.child.close()
 
     def send(self, *args, **kwargs):
+        command = kwargs.pop("command", None)
+
         if self.child is None:
             self.open()
+
+        if command is not None:
+            test = kwargs.pop("test", None)
+            if test is None:
+                test = current()
+
+            if self.test is not test:
+                self.test = test
+                self.child.logger(self.test.message_io(self.name))
+
+            return self._send_command(*args, **kwargs)
 
         return self.child.send(*args, **kwargs)
 
@@ -291,6 +288,34 @@ class Shell(Application):
             self.child.logger(self.test.message_io(self.name))
 
         return self.child.expect(*args, **kwargs)
+
+    def _send_command(self, command, timeout=60):
+        """Send command.
+        """
+        self.child.expect(self.prompt)
+        while True:
+            if not self.child.expect(self.prompt, timeout=0.001, expect_timeout=True):
+                break
+
+        lines = command.split("\n")
+
+        for i, line in enumerate(lines):
+            if i > 0:
+                self.child.send("\n", eol="")
+                self.child.expect("\n")
+                if i < len(lines) - 1:
+                    self.child.expect(">", timeout=0.001, expect_timeout=True)
+                time.sleep(0.001)
+
+            if line:
+                self.child.send(line, eol="")
+
+        while True:
+            if not self.child.expect("\n", timeout=0.001, expect_timeout=True):
+                break
+
+        self.child.send("\r", eol="")
+        self.child.expect("\n", timeout=timeout)
 
     def __call__(self, command, timeout=None, total=None, parser=None, asyncronous=False, test=None, name=None):
         """Execute shell command.
