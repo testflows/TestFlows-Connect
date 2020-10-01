@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import re
 import textwrap
 
 from testflows.core import *
@@ -22,6 +23,8 @@ from testflows.asserts import error, values
 def suite(self):
     """Suite of Shell tests.
     """
+    stress_count = self.context.stress_count
+
     with Given("import"):
         from testflows.connect import Shell
 
@@ -108,23 +111,59 @@ def suite(self):
 
     with Test("check empty lines before command"):
         with Shell() as bash:
-            for i in range(100):
+            for i in range(stress_count):
                 bash("\n\n\necho \"foo\"")
 
     with Test("check empty lines after command"):
         with Shell() as bash:
-            for i in range(100):
+            for i in range(stress_count):
                 bash("echo \"foo\"\n\n\n")
 
     with Test("check empty lines before and after command"):
         with Shell() as bash:
-            for i in range(100):
+            for i in range(stress_count):
                 bash("\n\n\necho \"foo\"\n\n\n")
 
     with Test("check multiline command"):
         with Shell() as bash:
-            for i in range(100):
+            for i in range(stress_count):
                 bash("cat << HEREDOC > foo\nline 1\nline 2\nline 3\nHEREDOC")
+
+    with Test("check matching long command (manual)"):
+        def check(command):
+            with Shell(command=command, name=" ".join(command), new_prompt="terminal# ") as bash:
+                for i in range(2048):
+                    cmd = f"echo \"{'a'*i}\""
+                    bash.expect(bash.prompt)
+                    bash.send(cmd)
+                    bash.expect(re.escape(cmd))
+                    bash.expect(bash.prompt)
+                    bash.send("\r", eol="")
+
+        with Example("sh"):
+            check(["/bin/sh"])
+
+        with Example("bash --noediting"):
+            check(["/bin/bash", "--noediting"])
+
+        with Example("bash"):
+            check(["/bin/bash"])
+
+    with Test("check matching long command"):
+        def check(command):
+            with Shell(command=command, name=" ".join(command), new_prompt="terminal# ") as bash:
+                for i in range(2048):
+                    c = bash(f"echo \"{'a'*i}\"")
+                    assert c.output == f"{'a'*i}", error()
+
+        with Example("sh"):
+            check(["/bin/sh"])
+
+        with Example("bash --noediting"):
+            check(["/bin/bash", "--noediting"])
+
+        with Example("bash"):
+            check(["/bin/bash"])
 
     with Test("check multiline command with long lines"):
         with Shell() as bash:
@@ -132,7 +171,8 @@ def suite(self):
                "'111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111', '22222222222222222'\n"
                "'22222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222', '33333333333333333'\n"
                "HEREDOC")
-            for i in range(100):
+
+            for i in range(stress_count):
                 bash(cmd)
 
     with Test("check multiline command using echo -e with long lines"):
@@ -148,15 +188,27 @@ def suite(self):
                 )
                 "
                 """)
-            for i in range(100):
+
+            for i in range(stress_count):
                 bash(cmd)
 
-@TestModule
-def regression(self):
-   with Test("import testflows.connect"):
-       import testflows.connect
+def posint(v):
+    v = int(v)
+    assert v > 0
+    return v
 
-   Suite(run=suite)
+def argparser(parser):
+    parser.add_argument("--stress-count", default=100, metavar="count", type=posint, help="number of repetitions, default: 100")
+
+@TestModule
+@ArgumentParser(argparser)
+def regression(self, stress_count):
+    self.context.stress_count = stress_count
+
+    with Test("import testflows.connect"):
+        import testflows.connect
+
+    Suite(run=suite)
 
 if main():
     Module(run=regression)
