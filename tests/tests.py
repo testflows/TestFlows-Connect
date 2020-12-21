@@ -20,7 +20,7 @@ from testflows.core import *
 from testflows.asserts import error, values
 
 @TestSuite
-def suite(self):
+def shell(self):
     """Suite of Shell tests.
     """
     stress_count = self.context.stress_count
@@ -192,6 +192,34 @@ def suite(self):
             for i in range(stress_count):
                 bash(cmd)
 
+    with Test("check subshell"):
+        with Shell() as bash:
+            with Check("first subshell"):
+                with bash.subshell("bash --noediting") as sub_bash:
+                    sub_bash("ls -la")
+                bash("ls -la")
+
+            with Check("second subshell"):
+                with bash.subshell("bash --noediting") as sub_bash:
+                    sub_bash("ls -la")
+                bash("ls -la")
+
+
+@TestSuite
+def ssh(self, host="cosmic2", username="vzakaznikov"):
+    """SSH test suite.
+    """
+    with Given("import"):
+        from testflows.connect import SSH
+
+    with Test("open"):
+        with SSH(host, username) as ssh:
+            pass
+
+    with Test("execute command"):
+        with SSH(host, username) as ssh:
+            ssh("ls -la")
+
 def posint(v):
     v = int(v)
     assert v > 0
@@ -208,7 +236,8 @@ def regression(self, stress_count):
     with Test("import testflows.connect"):
         import testflows.connect
 
-    Suite(run=suite)
+    Suite(run=shell)
+    Suite(run=ssh)
 
 if main():
     Module(run=regression)

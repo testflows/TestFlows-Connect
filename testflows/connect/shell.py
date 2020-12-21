@@ -16,6 +16,7 @@ import re
 import sys
 import time
 
+from contextlib import contextmanager
 from collections import namedtuple
 
 from testflows.core import current
@@ -75,11 +76,11 @@ class Command(object):
     def get_exitcode(self):
         if getattr(self.app.commands, "get_exitcode", None) is None:
             return None
-        
+
         while True:
             if not self.app.child.expect(self.app.prompt, timeout=0.001, expect_timeout=True):
                 break
-        
+ 
         command = self.app.commands.get_exitcode
         
         self.app.child.send(command, eol="")
@@ -289,7 +290,9 @@ class Shell(Application):
 
     def close(self):
         if self.child:
-            self.child.close()
+            child = self.child
+            self.child = None
+            child.close()
 
     def send(self, *args, **kwargs):
         command = kwargs.pop("command", None)
@@ -385,3 +388,40 @@ class Shell(Application):
 
     def __exit__(self, type, value, traceback):
         self.close()
+
+    @contextmanager
+    def subshell(self, command, name="sub-bash", prompt=None):
+        """Open subshell in the current shell.
+        """
+        def spawn(command):
+            self.expect(self.prompt)
+            self.send(command)
+            return self.child
+
+        def close():
+            pass
+
+        if self.child is None:
+            self.open()
+
+        child_close = self.child.close
+        child_timeout = self.child.timeout
+        child_eol = self.child.eol
+
+        try:
+            self.child.close = close
+
+            with Shell(spawn=spawn, command=command, name=name, prompt=prompt) as sub_shell:
+                try:
+                    yield sub_shell
+                finally:
+                    sub_shell.send("exit")
+                    sub_shell.expect("exit")
+                    sub_shell.expect(self.prompt)
+                    sub_shell.send("")
+                    sub_shell.expect("\n")
+        finally:
+            self.child.close = child_close
+            self.child.timeout = child_timeout
+            self.child.eol = child_eol
+
