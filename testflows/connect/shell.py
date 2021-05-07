@@ -256,6 +256,7 @@ class Shell(Application):
         get_exitcode="echo $?"
         )
     timeout = 10
+    multiline_prompt = ">"
 
     def __init__(self, command=None, prompt=None, new_prompt=None, name=None, spawn=spawn):
         self.command = command or self.command
@@ -337,14 +338,14 @@ class Shell(Application):
             if not self.child.expect(self.prompt, timeout=0.001, expect_timeout=True):
                 break
 
-        lines = command.split("\n")
+        lines = command.strip().split("\n")
 
         for i, line in enumerate(lines):
             if i > 0:
                 self.child.send("\n", eol="")
                 self.child.expect("\n")
                 if i < len(lines) - 1:
-                    self.child.expect(f"(>)|({self.prompt})", timeout=self.timeout, expect_timeout=False)
+                    self.child.expect(self.multiline_prompt, timeout=self.timeout, expect_timeout=False)
                 time.sleep(0.001)
 
             if line:
