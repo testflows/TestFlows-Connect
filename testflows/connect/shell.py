@@ -344,7 +344,7 @@ class Shell(Application):
                 self.child.send("\n", eol="")
                 self.child.expect("\n")
                 if i < len(lines) - 1:
-                    self.child.expect(">", timeout=0.001, expect_timeout=True)
+                    self.child.expect(f"(>)|({self.prompt})", timeout=self.timeout, expect_timeout=False)
                 time.sleep(0.001)
 
             if line:
