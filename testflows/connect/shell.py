@@ -344,9 +344,7 @@ class Shell(Application):
             if i > 0:
                 self.child.send("\n", eol="")
                 self.child.expect("\n")
-                if i < len(lines) - 1:
-                    self.child.expect(self.multiline_prompt, timeout=self.timeout, expect_timeout=False)
-                time.sleep(0.001)
+                self.child.expect(self.multiline_prompt, timeout=self.timeout, expect_timeout=False)
 
             if line:
                 self.child.send(line, eol="")
