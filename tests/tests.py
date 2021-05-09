@@ -17,7 +17,8 @@ import re
 import textwrap
 
 from testflows.core import *
-from testflows.asserts import error, values
+from testflows.uexpect import ExpectTimeoutError
+from testflows.asserts import error, values, raises
 
 @TestSuite
 def shell(self):
@@ -118,6 +119,12 @@ def shell(self):
         with Shell() as bash:
             for i in range(stress_count):
                 bash("echo \"foo\"\n\n\n")
+
+    with Test("check empty lines between commands"):
+        with Shell() as bash:
+            bash.timeout = 1 
+            with raises(ExpectTimeoutError):
+                bash("echo \"foo\"\n\n\necho\"foo\"")
 
     with Test("check empty lines before and after command"):
         with Shell() as bash:
