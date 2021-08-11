@@ -270,13 +270,19 @@ class Shell(Application):
     def __enter__(self):
         return self
 
-    def open(self, timeout=None):
+    def open(self, timeout=None, test=None):
         if timeout is None:
             timeout = self.timeout
-
         self.child = self.spawn(self.command)
         self.child.timeout(timeout)
         self.child.eol("\r")
+
+        if test is None:
+            test = current()
+
+        if self.test is not test:
+            self.test = test
+            self.child.logger(self.test.message_io(self.name))
 
         if self.new_prompt and getattr(self.commands, "change_prompt", None):
             self.child.expect(self.prompt)
