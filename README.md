@@ -1,8 +1,5 @@
 # TestFlows - Connect
 
-**The connect module is still work in progress and is currently under development.
-Please use it only for reference.**
-
 Minimal module to provide capabilities to connect to
 and control CLI programs.
 
