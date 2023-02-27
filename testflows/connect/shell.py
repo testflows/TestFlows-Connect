@@ -250,7 +250,7 @@ class Shell(Application):
     name = "bash"
     prompt = r'[#\$] '
     new_prompt = "bash# "
-    command = ["/bin/bash", "--noediting"]
+    command = ["/bin/bash", "--noediting", "--norc", "--noprofile"]
     commands = ShellCommands(
         change_prompt="export PS1=\"{}\"",
         get_exitcode="echo $?"
