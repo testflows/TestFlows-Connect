@@ -32,18 +32,14 @@ setup(
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: POSIX :: Linux",
     ],
-    python_requires='>=3.6',
+    python_requires=">=3.6",
     license="Apache-2.0",
     packages=[
         "testflows.connect",
     ],
     zip_safe=False,
     install_requires=[
-        #"testflows.uexpect"
+        # "testflows.uexpect"
     ],
-    extras_require={
-        "dev": [
-            "testflows.core>=1.6"
-        ]
-    }
+    extras_require={"dev": ["testflows.core>=1.6"]},
 )

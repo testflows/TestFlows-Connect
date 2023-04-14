@@ -18,11 +18,20 @@ from .shell import Shell
 
 __all__ = ["SSH"]
 
+
 @contextmanager
-def SSH(host, username, password=None, command="{client} {username}@{host} {options}",
-        client="ssh", options=["-v"], port=None, prompt=r"[\$#] ", new_prompt="bash# "):
-    """Open SSH terminal to a remote host.
-    """
+def SSH(
+    host,
+    username,
+    password=None,
+    command="{client} {username}@{host} {options}",
+    client="ssh",
+    options=["-v"],
+    port=None,
+    prompt=r"[\$#] ",
+    new_prompt="bash# ",
+):
+    """Open SSH terminal to a remote host."""
     if options is None:
         options = []
 
@@ -30,12 +39,19 @@ def SSH(host, username, password=None, command="{client} {username}@{host} {opti
         options.append(f"-p {port}")
 
     with Shell(name=f"ssh-{host}") as bash:
-        command = command.format(client=client, username=username, host=host, options=" ".join(options).strip())
+        command = command.format(
+            client=client,
+            username=username,
+            host=host,
+            options=" ".join(options).strip(),
+        )
 
         bash.send(command)
 
-        c = bash.expect(r"(Last login)|(Could not resolve hostname)|(Connection refused)|"
-            r"(Are you sure you want to continue connecting)")
+        c = bash.expect(
+            r"(Last login)|(Could not resolve hostname)|(Connection refused)|"
+            r"(Are you sure you want to continue connecting)"
+        )
 
         if c.group() == "Are you sure you want to continue connecting":
             bash.send("yes", delay=0.5)
@@ -62,7 +78,13 @@ def SSH(host, username, password=None, command="{client} {username}@{host} {opti
         try:
             bash.child.close = close
 
-            with Shell(spawn=spawn, name=host, prompt=prompt, command=[""], new_prompt=new_prompt) as ssh:
+            with Shell(
+                spawn=spawn,
+                name=host,
+                prompt=prompt,
+                command=[""],
+                new_prompt=new_prompt,
+            ) as ssh:
                 yield ssh
         finally:
             bash.child.close = child_close

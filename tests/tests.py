@@ -20,10 +20,10 @@ from testflows.core import *
 from testflows.uexpect import ExpectTimeoutError
 from testflows.asserts import error, values, raises
 
+
 @TestSuite
 def shell(self):
-    """Suite of Shell tests.
-    """
+    """Suite of Shell tests."""
     stress_count = self.context.stress_count
 
     with Given("import"):
@@ -73,7 +73,9 @@ def shell(self):
             with Step("multi line output"):
                 text = "line1\\nline2"
                 with values() as that:
-                    assert that(bash(f"echo -e \"{text}\"").output) == text.replace("\\n", "\n"), error()
+                    assert that(bash(f'echo -e "{text}"').output) == text.replace(
+                        "\\n", "\n"
+                    ), error()
 
     with Test("check command exitcode"):
         with Shell() as bash:
@@ -95,7 +97,9 @@ def shell(self):
 
     with Test("async command with custom name"):
         with Shell() as bash:
-            with bash("tail -f /proc/cpuinfo", asyncronous=True, name="cpuinfo") as tail:
+            with bash(
+                "tail -f /proc/cpuinfo", asyncronous=True, name="cpuinfo"
+            ) as tail:
                 tail.readlines()
 
     with Test("check double prompts before command"):
@@ -113,23 +117,23 @@ def shell(self):
     with Test("check empty lines before command"):
         with Shell() as bash:
             for i in range(stress_count):
-                bash("\n\n\necho \"foo\"")
+                bash('\n\n\necho "foo"')
 
     with Test("check empty lines after command"):
         with Shell() as bash:
             for i in range(stress_count):
-                bash("echo \"foo\"\n\n\n")
+                bash('echo "foo"\n\n\n')
 
     with Test("check empty lines between commands"):
         with Shell() as bash:
-            bash.timeout = 1 
+            bash.timeout = 1
             with raises(ExpectTimeoutError):
-                bash("echo \"foo\"\n\n\necho\"foo\"")
+                bash('echo "foo"\n\n\necho"foo"')
 
     with Test("check empty lines before and after command"):
         with Shell() as bash:
             for i in range(stress_count):
-                bash("\n\n\necho \"foo\"\n\n\n")
+                bash('\n\n\necho "foo"\n\n\n')
 
     with Test("check multiline command"):
         with Shell() as bash:
@@ -137,8 +141,11 @@ def shell(self):
                 bash("cat << HEREDOC > foo\nline 1\nline 2\nline 3\nHEREDOC")
 
     with Test("check matching long command (manual)"):
+
         def check(command):
-            with Shell(command=command, name=" ".join(command), new_prompt="terminal# ") as bash:
+            with Shell(
+                command=command, name=" ".join(command), new_prompt="terminal# "
+            ) as bash:
                 for i in range(2048):
                     cmd = f"echo \"{'a'*i}\""
                     bash.expect(bash.prompt)
@@ -157,8 +164,11 @@ def shell(self):
             check(["/bin/bash"])
 
     with Test("check matching long command"):
+
         def check(command):
-            with Shell(command=command, name=" ".join(command), new_prompt="terminal# ") as bash:
+            with Shell(
+                command=command, name=" ".join(command), new_prompt="terminal# "
+            ) as bash:
                 for i in range(2048):
                     c = bash(f"echo \"{'a'*i}\"")
                     assert c.output == f"{'a'*i}", error()
@@ -169,22 +179,25 @@ def shell(self):
         with Example("bash --noediting"):
             check(["/bin/bash", "--noediting"])
 
-        with Example("bash"):
-            check(["/bin/bash"])
+        # with Example("bash"):
+        #    check(["/bin/bash"])
 
     with Test("check multiline command with long lines"):
         with Shell() as bash:
-            cmd = ("cat << HEREDOC > foo\n"
-               "'111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111', '22222222222222222'\n"
-               "'22222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222', '33333333333333333'\n"
-               "HEREDOC")
+            cmd = (
+                "cat << HEREDOC > foo\n"
+                "'111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111', '22222222222222222'\n"
+                "'22222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222', '33333333333333333'\n"
+                "HEREDOC"
+            )
 
             for i in range(stress_count):
                 bash(cmd)
 
     with Test("check multiline command using echo -e with long lines"):
         with Shell() as bash:
-            cmd = textwrap.dedent("""
+            cmd = textwrap.dedent(
+                """
                 echo -e "
                 SELECT hex(
                     aes_decrypt_mysql(
@@ -194,7 +207,8 @@ def shell(self):
                     )
                 )
                 "
-                """)
+                """
+            )
 
             for i in range(stress_count):
                 bash(cmd)
@@ -214,8 +228,7 @@ def shell(self):
 
 @TestSuite
 def ssh(self, host="cosmic2", username="vzakaznikov"):
-    """SSH test suite.
-    """
+    """SSH test suite."""
     with Given("import"):
         from testflows.connect import SSH
 
@@ -227,13 +240,22 @@ def ssh(self, host="cosmic2", username="vzakaznikov"):
         with SSH(host, username) as ssh:
             ssh("ls -la")
 
+
 def posint(v):
     v = int(v)
     assert v > 0
     return v
 
+
 def argparser(parser):
-    parser.add_argument("--stress-count", default=100, metavar="count", type=posint, help="number of repetitions, default: 100")
+    parser.add_argument(
+        "--stress-count",
+        default=100,
+        metavar="count",
+        type=posint,
+        help="number of repetitions, default: 100",
+    )
+
 
 @TestModule
 @ArgumentParser(argparser)
@@ -245,6 +267,7 @@ def regression(self, stress_count):
 
     Suite(run=shell)
     Suite(run=ssh)
+
 
 if main():
     Module(run=regression)

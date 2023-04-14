@@ -24,10 +24,12 @@ from testflows.uexpect import spawn, ExpectTimeoutError
 
 __all__ = ["Shell", "Parser"]
 
+
 class Application(object):
     """Base class for all CLI applications
     launched and controlled using uExpect.
     """
+
     pass
 
 
@@ -78,17 +80,19 @@ class Command(object):
             return None
 
         while True:
-            if not self.app.child.expect(self.app.prompt, timeout=0.001, expect_timeout=True):
+            if not self.app.child.expect(
+                self.app.prompt, timeout=0.001, expect_timeout=True
+            ):
                 break
- 
+
         command = self.app.commands.get_exitcode
-        
+
         self.app.child.send(command, eol="")
         self.app.child.expect(re.escape(command))
         self.app.child.send("\r", eol="")
         self.app.child.expect("\n")
         self.app.child.expect(self.app.prompt)
-        
+
         return int(self.app.child.before.rstrip().replace("\r", ""))
 
     def execute(self):
@@ -103,7 +107,7 @@ class Command(object):
 
         while True:
             raised_timeout = False
-            
+
             try:
                 match = self.app.child.expect(pattern, timeout=next_timeout)
 
@@ -125,12 +129,14 @@ class Command(object):
                             raise ExpectTimeoutError(match.re, self.total, self.output)
                         next_timeout = max(self.timeout, self.total - elapsed)
                         continue
-            
+
             except ExpectTimeoutError:
                 if not raised_timeout:
-                    self.output = self.app.child.before \
-                        if self.output is None \
-                        else (self.output + (self.app.child.before or ''))
+                    self.output = (
+                        self.app.child.before
+                        if self.output is None
+                        else (self.output + (self.app.child.before or ""))
+                    )
                 elapsed = time.time() - start_time
 
                 if self.total:
@@ -152,9 +158,10 @@ class Command(object):
 
         return self
 
+
 class AsyncCommand(Command):
-    """Asynchronous command.
-    """
+    """Asynchronous command."""
+
     def __init__(self, app, command, timeout=None, parser=None, name=None):
         if timeout is None:
             timeout = 0.5
@@ -162,7 +169,14 @@ class AsyncCommand(Command):
         if name is None:
             name = command
 
-        super(AsyncCommand, self).__init__(app=app, command=command, timeout=timeout, total=None, parser=parser, name=name)
+        super(AsyncCommand, self).__init__(
+            app=app,
+            command=command,
+            timeout=timeout,
+            total=None,
+            parser=parser,
+            name=name,
+        )
 
     def execute(self):
         self.app._send_command(self.command)
@@ -189,8 +203,7 @@ class AsyncCommand(Command):
         return output
 
     def readlines(self, timeout=None, test=None):
-        """Return currently available output.
-        """
+        """Return currently available output."""
         if test is None:
             test = current()
 
@@ -221,9 +234,11 @@ class AsyncCommand(Command):
                     output += self.app.child.before + self.app.child.after
 
             except ExpectTimeoutError:
-                output = self.app.child.before \
-                    if output is None \
-                    else (output + (self.app.child.before or ''))
+                output = (
+                    self.app.child.before
+                    if output is None
+                    else (output + (self.app.child.before or ""))
+                )
                 break
 
         output = output.rstrip().replace("\r", "")
@@ -237,7 +252,9 @@ class AsyncCommand(Command):
         self.output += output
         return output
 
+
 ShellCommands = namedtuple("ShellCommands", "change_prompt get_exitcode")
+
 
 class Shell(Application):
     """Connection to shell application.
@@ -247,18 +264,18 @@ class Shell(Application):
     :param change_prompt: command to change promptm default: None
     :param new_prompt: new prompt to set, default: None
     """
+
     name = "bash"
-    prompt = r'[#\$] '
+    prompt = r"[#\$] "
     new_prompt = "bash# "
     command = ["/bin/bash", "--noediting", "--norc", "--noprofile"]
-    commands = ShellCommands(
-        change_prompt="export PS1=\"{}\"",
-        get_exitcode="echo $?"
-        )
+    commands = ShellCommands(change_prompt='export PS1="{}"', get_exitcode="echo $?")
     timeout = 10
     multiline_prompt = ">"
 
-    def __init__(self, command=None, prompt=None, new_prompt=None, name=None, spawn=spawn):
+    def __init__(
+        self, command=None, prompt=None, new_prompt=None, name=None, spawn=spawn
+    ):
         self.command = command or self.command
         self.prompt = prompt or self.prompt
         self.new_prompt = new_prompt or self.new_prompt
@@ -286,13 +303,13 @@ class Shell(Application):
 
         if self.new_prompt and getattr(self.commands, "change_prompt", None):
             self.child.expect(self.prompt)
-            
+
             change_prompt_command = self.commands.change_prompt.format(self.new_prompt)
-            
+
             self.child.send(change_prompt_command)
             self.child.expect(re.escape(change_prompt_command))
             self.child.expect("\n")
-            
+
             self.prompt = self.new_prompt
 
     def close(self):
@@ -336,8 +353,7 @@ class Shell(Application):
         return self.child.expect(*args, **kwargs)
 
     def _send_command(self, command, timeout=60):
-        """Send command.
-        """
+        """Send command."""
         self.child.expect(self.prompt)
 
         while True:
@@ -350,7 +366,9 @@ class Shell(Application):
             if i > 0:
                 self.child.send("\n", eol="")
                 self.child.expect("\n")
-                self.child.expect(self.multiline_prompt, timeout=self.timeout, expect_timeout=False)
+                self.child.expect(
+                    self.multiline_prompt, timeout=self.timeout, expect_timeout=False
+                )
 
             if line:
                 self.child.send(line, eol="")
@@ -362,8 +380,17 @@ class Shell(Application):
         self.child.send("\r", eol="")
         self.child.expect("\n", timeout=timeout)
 
-    def __call__(self, command, timeout=None, total=None, parser=None, asynchronous=False,
-            asyncronous=False, test=None, name=None):
+    def __call__(
+        self,
+        command,
+        timeout=None,
+        total=None,
+        parser=None,
+        asynchronous=False,
+        asyncronous=False,
+        test=None,
+        name=None,
+    ):
         """Execute shell command.
 
         :param command: command to execute
@@ -387,17 +414,26 @@ class Shell(Application):
             self.test = test
 
         if asyncronous or asynchronous:
-            return AsyncCommand(self, command=command, timeout=None, parser=parser, name=name)
+            return AsyncCommand(
+                self, command=command, timeout=None, parser=parser, name=name
+            )
 
-        return Command(self, command=command, timeout=timeout, total=total, parser=parser, name=name)
+        return Command(
+            self,
+            command=command,
+            timeout=timeout,
+            total=total,
+            parser=parser,
+            name=name,
+        )
 
     def __exit__(self, type, value, traceback):
         self.close()
 
     @contextmanager
     def subshell(self, command, name="sub-bash", prompt=None):
-        """Open subshell in the current shell.
-        """
+        """Open subshell in the current shell."""
+
         def spawn(command):
             self.expect(self.prompt)
             self.send(command)
@@ -416,7 +452,9 @@ class Shell(Application):
         try:
             self.child.close = close
 
-            with Shell(spawn=spawn, command=command, name=name, prompt=prompt) as sub_shell:
+            with Shell(
+                spawn=spawn, command=command, name=name, prompt=prompt
+            ) as sub_shell:
                 try:
                     yield sub_shell
                 finally:
@@ -429,4 +467,3 @@ class Shell(Application):
             self.child.close = child_close
             self.child.timeout = child_timeout
             self.child.eol = child_eol
-
