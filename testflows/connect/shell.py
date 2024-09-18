@@ -269,7 +269,9 @@ class Shell(Application):
     prompt = r"[#\$] "
     new_prompt = "bash# "
     command = ["/bin/bash", "--noediting", "--norc", "--noprofile"]
-    commands = ShellCommands(change_prompt='export PS1="{}"', get_exitcode="echo $?")
+    commands = ShellCommands(
+        change_prompt='unset PROMPT_COMMAND; export PS1="{}"', get_exitcode="echo $?"
+    )
     timeout = 10
     multiline_prompt = ">"
 
